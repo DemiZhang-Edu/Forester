@@ -1,0 +1,152 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isEmailVerified() && (
+        request.auth.token.email == 'demizy2024@gmail.com'
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Entity Validations ---
+
+    function isValidUser(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 256 &&
+             data.displayName is string && data.displayName.size() <= 100 &&
+             (data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 1000)) &&
+             data.badges is list && data.badges.size() <= 50 &&
+             data.postsCount is number && data.postsCount >= 0 &&
+             data.xp is number && data.xp >= 0 &&
+             data.totalLikes is number && data.totalLikes >= 0 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidPost(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.type in ['photo', 'video'] &&
+             data.url is string && data.url.size() <= 1000 &&
+             data.title is string && data.title.size() <= 200 &&
+             data.description is string && data.description.size() <= 2000 &&
+             data.tags is list && data.tags.size() <= 10 &&
+             data.status in ['pending', 'approved', 'rejected'] &&
+             data.likes is number && data.likes >= 0 &&
+             data.commentCount is number && data.commentCount >= 0 &&
+             data.createdAt is timestamp;
+    }
+
+    function isValidComment(data) {
+      return data.postId is string && data.postId.size() <= 128 &&
+             data.userId is string && data.userId.size() == 28 &&
+             data.userName is string && data.userName.size() <= 100 &&
+             data.text is string && data.text.size() <= 1000 &&
+             data.createdAt is timestamp;
+    }
+
+    // --- Collection Rules ---
+
+    // Users
+    match /users/{userId} {
+      allow get: if true;
+      allow list: if true; 
+
+      allow create: if isOwner(userId) && isValidUser(incoming());
+      allow update: if (
+        (isOwner(userId) && isValidUser(incoming()) && 
+          incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'postsCount', 'xp', 'badges', 'totalLikes']))
+        || (isSignedIn() && (
+          // Action: Stat Gain (from others liking posts)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['totalLikes', 'xp']) && 
+           incoming().totalLikes == existing().totalLikes + 1)
+        ))
+        || isAdmin()
+      );
+    }
+
+    // Posts
+    match /posts/{postId} {
+      allow get: if true;
+      allow list: if resource.data.status == 'approved' || isAdmin() || (isSignedIn() && resource.data.userId == request.auth.uid);
+
+      allow create: if isEmailVerified() && isValidPost(incoming()) && 
+                    isOwner(incoming().userId) && 
+                    incoming().status == 'approved' &&
+                    incoming().likes == 0 &&
+                    incoming().commentCount == 0 &&
+                    incoming().createdAt == request.time;
+      
+      allow update: if (
+        isAdmin() || 
+        (isSignedIn() && (
+          // Action: Like (anyone signed in can like)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['likes']) && incoming().likes == existing().likes + 1) ||
+          // Action: Comment Count update (triggered by system/trigger logic)
+          (incoming().diff(existing()).affectedKeys().hasOnly(['commentCount']))
+        ))
+      );
+
+      allow delete: if isAdmin();
+      
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow list: if true;
+        allow get: if true;
+        allow create: if isEmailVerified() && 
+                      isValidComment(incoming()) && 
+                      isOwner(incoming().userId) &&
+                      incoming().createdAt == request.time &&
+                      exists(/databases/$(database)/documents/posts/$(postId));
+        
+        allow update, delete: if isAdmin() || isOwner(existing().userId);
+      }
+    }
+
+    // Global Chat
+    match /global_chat/{chatId} {
+      allow read: if true;
+      allow create: if isEmailVerified() && 
+                    incoming().userId == request.auth.uid &&
+                    incoming().text is string && incoming().text.size() <= 500 &&
+                    incoming().createdAt == request.time;
+      allow update, delete: if isAdmin();
+    }
+
+    // Admin collection for role lookups
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Only manageable via console or specialized cloud function
+    }
+  }
+}

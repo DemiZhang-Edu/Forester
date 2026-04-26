@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Playfair Display", serif;
+  
+  --color-brand-900: #064e3b; /* emerald-900 */
+  --color-brand-800: #065f46; /* emerald-800 */
+  --color-brand-700: #047857; /* emerald-700 */
+  --color-brand-600: #059669; /* emerald-600 */
+  --color-brand-500: #10b981; /* emerald-500 */
+  --color-brand-100: #ecfdf5; /* emerald-50 */
+  
+  --color-accent-600: #d97706; /* amber-600 */
+  --color-accent-500: #f59e0b; /* amber-500 */
+  --color-accent-400: #fbbf24; /* amber-400 */
+  --color-accent-100: #fffbeb; /* amber-50 */
+  
+  --color-stone-900: #1c1917;
+  --color-stone-800: #292524;
+  --color-stone-600: #57534e;
+  --color-stone-200: #e7e5e4;
+  --color-stone-50: #fafaf9;
+
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+  --radius-4xl: 2.5rem;
+
+  --color-background: var(--color-stone-50);
+  --color-foreground: var(--color-stone-800);
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-stone-800);
+  --color-popover: #ffffff;
+  --color-popover-foreground: var(--color-stone-800);
+  --color-primary: var(--color-brand-600);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-brand-100);
+  --color-secondary-foreground: var(--color-brand-900);
+  --color-muted: var(--color-stone-200);
+  --color-muted-foreground: var(--color-stone-600);
+  --color-accent: var(--color-accent-400);
+  --color-accent-foreground: var(--color-brand-900);
+  --color-border: var(--color-brand-100);
+  --color-input: var(--color-brand-100);
+  --color-ring: var(--color-ring);
+  --color-input: var(--color-brand-100);
+}
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: var(--color-stone-50);
+  --color-foreground: var(--color-stone-800);
+  --color-card: #ffffff;
+  --color-card-foreground: var(--color-stone-800);
+  --color-border: var(--color-brand-100);
+  --color-input: var(--color-brand-100);
+
+  --dark-color-background: #0c0a09; /* stone-950 approx */
+  --dark-color-foreground: var(--color-stone-50);
+  --dark-color-card: #171717; /* stone-900 approx */
+  --dark-color-card-foreground: var(--color-stone-50);
+  --dark-color-border: #262626; /* stone-800 approx */
+  --dark-color-input: #262626;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-brand-500/50 transition-colors duration-300;
+  }
+  body {
+    @apply bg-transparent text-foreground font-sans antialiased;
+  }
+  .dark {
+    --color-background: var(--dark-color-background);
+    --color-foreground: var(--dark-color-foreground);
+    --color-card: var(--dark-color-card);
+    --color-card-foreground: var(--dark-color-card-foreground);
+    --color-border: var(--dark-color-border);
+    --color-input: var(--dark-color-input);
+  }
+}
+
+@layer utilities {
+  .heading-vibrant {
+    @apply font-black tracking-tight text-brand-900 dark:text-brand-500 italic;
+  }
+  .card-vibrant {
+    @apply bg-card text-card-foreground rounded-3xl border-2 border-border shadow-sm transition-all hover:shadow-md;
+  }
+  .glass {
+    @apply bg-white/40 dark:bg-stone-900/40 backdrop-blur-md border border-white/20 dark:border-white/10;
+  }
+  .progress-glow {
+    @apply shadow-[0_0_12px_rgba(16,185,129,0.5)];
+  }
+}

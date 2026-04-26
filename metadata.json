@@ -1,0 +1,8 @@
+{
+  "name": "Forester",
+  "description": "A beautiful social platform for sharing nature and animal photos/videos, featuring community ratings, badges, and a leaderboard.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
